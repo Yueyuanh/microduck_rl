@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Microduck MCU 轻量化部署评估</title>
+  <style>
+    :root {
+      --ink: #16202a;
+      --muted: #5e6973;
+      --line: #d8dee3;
+      --paper: #f7f8f6;
+      --surface: #ffffff;
+      --teal: #007f7b;
+      --teal-soft: #dcefed;
+      --yellow: #f3c64f;
+      --yellow-soft: #fff4cf;
+      --coral: #d65c4a;
+      --coral-soft: #fae5e1;
+      --blue: #356fa3;
+      --blue-soft: #e2edf7;
+      --green: #367c4b;
+      --green-soft: #e3f0e7;
+      --shadow: 0 10px 30px rgba(22, 32, 42, 0.08);
+      --content: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--paper);
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--teal);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    button,
+    input { font: inherit; }
+
+    .topline {
+      position: relative;
+      height: 5px;
+      background: var(--teal);
+      overflow: hidden;
+    }
+
+    .topline::before,
+    .topline::after {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+    }
+
+    .topline::before {
+      left: 54%;
+      width: 24%;
+      background: var(--yellow);
+    }
+
+    .topline::after {
+      left: 78%;
+      right: 0;
+      background: var(--coral);
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero {
+      width: min(var(--content), calc(100% - 40px));
+      min-height: 540px;
+      margin: 0 auto;
+      padding: 58px 0 42px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+      gap: 56px;
+      align-items: center;
+    }
+
+    .eyebrow,
+    .section-kicker {
+      margin: 0 0 10px;
+      color: var(--teal);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p { margin-top: 0; }
+
+    h1 {
+      max-width: 780px;
+      margin-bottom: 20px;
+      font-size: 4.5rem;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .lede {
+      max-width: 700px;
+      margin-bottom: 28px;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .verdict {
+      display: grid;
+      grid-template-columns: 6px 1fr;
+      gap: 14px;
+      max-width: 680px;
+      padding: 17px 20px 17px 0;
+      background: var(--teal-soft);
+      border: 1px solid #bedfdc;
+      border-radius: 6px;
+    }
+
+    .verdict::before {
+      content: "";
+      background: var(--teal);
+    }
+
+    .verdict strong { color: #005d59; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 22px;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .architecture {
+      min-height: 396px;
+      padding: 26px;
+      background: #19242e;
+      color: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: grid;
+      align-content: center;
+      overflow: hidden;
+    }
+
+    .architecture h2 {
+      margin-bottom: 5px;
+      font-size: 1.05rem;
+    }
+
+    .architecture .sub {
+      margin-bottom: 26px;
+      color: #aebac4;
+      font-size: 0.85rem;
+    }
+
+    .network-flow {
+      display: grid;
+      grid-template-columns: repeat(9, auto);
+      gap: 7px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .layer {
+      width: 52px;
+      min-height: 116px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 5px;
+      background: #243441;
+    }
+
+    .layer strong { font-size: 1rem; }
+    .layer small { color: #b9c4cc; font-size: 0.66rem; }
+    .layer.input { height: 74px; background: #255d68; }
+    .layer.l1 { height: 190px; background: #007f7b; }
+    .layer.l2 { height: 154px; background: #218f82; }
+    .layer.l3 { height: 124px; background: #477e68; }
+    .layer.output { height: 62px; background: #a45749; }
+
+    .arrow {
+      color: var(--yellow);
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    .arch-foot {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 25px;
+    }
+
+    .arch-foot div {
+      min-height: 66px;
+      padding: 10px;
+      border-top: 1px solid #475763;
+    }
+
+    .arch-foot strong {
+      display: block;
+      color: var(--yellow);
+      font-size: 1.05rem;
+    }
+
+    .arch-foot span { color: #aebac4; font-size: 0.74rem; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    nav .inner {
+      width: min(var(--content), calc(100% - 40px));
+      margin: auto;
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    nav a {
+      flex: 0 0 auto;
+      padding: 14px 0 12px;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    nav a:hover,
+    nav a:focus { color: var(--teal); border-bottom-color: var(--teal); }
+
+    main { overflow: hidden; }
+
+    section {
+      padding: 76px 0;
+      scroll-margin-top: 46px;
+    }
+
+    section:nth-child(even) {
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .container {
+      width: min(var(--content), calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.58fr);
+      gap: 60px;
+      align-items: end;
+      margin-bottom: 38px;
+    }
+
+    .section-head h2 {
+      margin-bottom: 0;
+      font-size: 2.65rem;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .metric {
+      min-height: 148px;
+      padding: 25px;
+      border-right: 1px solid var(--line);
+    }
+
+    .metric:last-child { border-right: 0; }
+
+    .metric .value {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 2.2rem;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+      margin-top: 28px;
+    }
+
+    .panel {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+    }
+
+    .panel h3 { margin-bottom: 18px; font-size: 1.05rem; }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 78px;
+      gap: 12px;
+      align-items: center;
+      margin: 14px 0;
+      font-size: 0.84rem;
+    }
+
+    .track {
+      height: 18px;
+      background: #edf0f1;
+      border: 1px solid #e0e5e7;
+      overflow: hidden;
+    }
+
+    .fill { height: 100%; background: var(--blue); }
+    .fill.fp16 { width: 50%; background: var(--teal); }
+    .fill.int8 { width: 25%; background: var(--green); }
+    .fill.fp32 { width: 100%; }
+
+    .op-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .op {
+      min-height: 96px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      background: #fafbfa;
+    }
+
+    .op strong { display: block; font-size: 1.45rem; }
+    .op span { color: var(--muted); font-size: 0.77rem; }
+    .op.risk { background: var(--yellow-soft); border-color: #ead584; }
+
+    .selector-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .segmented {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #eef1f1;
+    }
+
+    .segmented button {
+      min-width: 132px;
+      min-height: 40px;
+      padding: 7px 14px;
+      color: var(--muted);
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 750;
+    }
+
+    .segmented button[aria-selected="true"] {
+      color: var(--ink);
+      background: white;
+      box-shadow: 0 2px 8px rgba(22,32,42,0.12);
+    }
+
+    .platform-layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
+      gap: 28px;
+    }
+
+    .platform-card {
+      min-height: 410px;
+      padding: 30px;
+      color: white;
+      background: #19242e;
+      border-radius: 6px;
+    }
+
+    .platform-card h3 { font-size: 1.65rem; margin-bottom: 4px; }
+    .platform-card .platform-sub { color: #b3bec6; font-size: 0.88rem; }
+
+    .score-list { margin-top: 28px; }
+
+    .score-row {
+      display: grid;
+      grid-template-columns: 122px 1fr 34px;
+      gap: 10px;
+      align-items: center;
+      margin: 13px 0;
+      font-size: 0.8rem;
+    }
+
+    .score-track { height: 8px; background: #36444f; }
+    .score-fill { height: 100%; background: var(--yellow); }
+
+    .platform-note {
+      margin: 26px 0 0;
+      padding-top: 18px;
+      color: #d0d8dd;
+      border-top: 1px solid #43515b;
+      font-size: 0.84rem;
+    }
+
+    .comparison {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      color: var(--muted);
+      background: #f1f3f3;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .status.good { color: #275e38; background: var(--green-soft); }
+    .status.check { color: #735d12; background: var(--yellow-soft); }
+    .status.risk { color: #8c382d; background: var(--coral-soft); }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0;
+      counter-reset: stage;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 210px;
+      padding: 25px 20px;
+      border: 1px solid var(--line);
+      border-right: 0;
+      background: white;
+      counter-increment: stage;
+    }
+
+    .stage:first-child { border-radius: 6px 0 0 6px; }
+    .stage:last-child { border-right: 1px solid var(--line); border-radius: 0 6px 6px 0; }
+
+    .stage::before {
+      content: "0" counter(stage);
+      display: block;
+      margin-bottom: 32px;
+      color: var(--teal);
+      font-size: 0.78rem;
+      font-weight: 850;
+    }
+
+    .stage:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      top: 45px;
+      right: -6px;
+      width: 10px;
+      height: 10px;
+      border-top: 2px solid var(--teal);
+      border-right: 2px solid var(--teal);
+      background: white;
+      transform: rotate(45deg);
+    }
+
+    .stage h3 { margin-bottom: 7px; font-size: 0.95rem; }
+    .stage p { color: var(--muted); font-size: 0.78rem; }
+
+    .callout {
+      margin-top: 26px;
+      padding: 22px 25px;
+      border-left: 5px solid var(--coral);
+      background: var(--coral-soft);
+    }
+
+    .callout strong { color: #84392f; }
+
+    .risk-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .risk-card {
+      min-height: 210px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--yellow);
+      border-radius: 4px;
+      background: white;
+    }
+
+    .risk-card.high { border-top-color: var(--coral); }
+    .risk-card.low { border-top-color: var(--green); }
+    .risk-card h3 { margin-bottom: 8px; font-size: 1rem; }
+    .risk-card p { color: var(--muted); font-size: 0.83rem; }
+    .risk-card .mitigation { color: var(--ink); font-weight: 650; }
+
+    .gates {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .gate {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 16px;
+      min-height: 118px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+
+    .gate-num {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--teal);
+      font-weight: 850;
+    }
+
+    .gate h3 { margin-bottom: 3px; font-size: 0.95rem; }
+    .gate p { margin-bottom: 0; color: var(--muted); font-size: 0.8rem; }
+
+    .recommendation {
+      display: grid;
+      grid-template-columns: 0.72fr 1.28fr;
+      gap: 30px;
+      align-items: stretch;
+    }
+
+    .decision {
+      padding: 32px;
+      color: white;
+      background: var(--teal);
+      border-radius: 6px;
+    }
+
+    .decision .big {
+      display: block;
+      margin: 14px 0 12px;
+      font-size: 2.2rem;
+      font-weight: 850;
+      line-height: 1.05;
+    }
+
+    .decision p { color: #d8f0ed; }
+
+    .next-steps {
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+    }
+
+    .next-steps ol {
+      margin: 18px 0 0;
+      padding-left: 1.25rem;
+    }
+
+    .next-steps li { margin: 10px 0; padding-left: 6px; }
+
+    .sources {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px 28px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sources li {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.84rem;
+    }
+
+    footer {
+      padding: 38px 0;
+      color: #adb8c0;
+      background: #19242e;
+      font-size: 0.8rem;
+    }
+
+    footer .container {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+    }
+
+    .only-active { display: none; }
+    .only-active.active { display: block; }
+
+    @media (max-width: 960px) {
+      h1 { font-size: 3.6rem; }
+      .section-head h2 { font-size: 2.3rem; }
+      .metric .value { font-size: 2rem; }
+      .hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+      .architecture { min-height: 370px; }
+      .section-head { grid-template-columns: 1fr; gap: 16px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .platform-layout,
+      .recommendation { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .stage,
+      .stage:first-child,
+      .stage:last-child { border: 1px solid var(--line); border-radius: 4px; }
+      .stage::after { display: none; }
+      .risk-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      .hero,
+      .container,
+      nav .inner { width: min(100% - 28px, var(--content)); }
+      .hero { padding: 38px 0 28px; gap: 30px; }
+      h1 { font-size: 2.4rem; }
+      .section-head h2 { font-size: 1.9rem; }
+      .metric .value { font-size: 1.8rem; }
+      .architecture { margin: 0 -7px; padding: 18px 12px; min-height: 340px; }
+      .network-flow { gap: 4px; }
+      .layer { width: 42px; }
+      .arrow { font-size: 0.85rem; }
+      .arch-foot { gap: 4px; }
+      .arch-foot div { padding: 8px 4px; }
+      section { padding: 54px 0; }
+      .metrics,
+      .two-col,
+      .risk-grid,
+      .gates,
+      .sources { grid-template-columns: 1fr; }
+      .metric { border-right: 0; border-bottom: 1px solid var(--line); }
+      .metric:last-child { border-bottom: 0; }
+      .op-grid { grid-template-columns: 1fr 1fr; }
+      .selector-wrap { align-items: stretch; flex-direction: column; }
+      .segmented { width: 100%; }
+      .segmented button { min-width: 0; }
+      .pipeline { grid-template-columns: 1fr; }
+      .stage { min-height: 150px; }
+      .stage::before { margin-bottom: 15px; }
+      .comparison { overflow-x: auto; }
+      table { min-width: 650px; }
+      footer .container { flex-direction: column; }
+    }
+
+    @media print {
+      nav,
+      .segmented { display: none; }
+      .only-active { display: block !important; }
+      section { break-inside: avoid; }
+      body { background: white; }
+      a { color: var(--ink); }
+    }
+  </style>
+</head>
+<body>
+  <div class="topline"></div>
+  <header>
+    <div class="hero">
+      <div>
+        <p class="eyebrow">Engineering Assessment / 2026-10-25</p>
+        <h1>Microduck 策略的 MCU 轻量化部署</h1>
+        <p class="lede">
+          针对当前 Velocity 策略的 FP32 ONNX，评估 ESP32-S3 与 STM32 的 INT8 部署可行性、工具链、算子风险和验证门槛。
+          报告基于实际模型图，而不是通用 TinyML 估算。
+        </p>
+        <div class="verdict">
+          <div>
+            <strong>结论：可做，但不能直接烧录现有 ONNX。</strong><br>
+            19.8 万参数和约 9.84 MMAC/s 的负载适合 MCU；真正的工程关口是 ELU 的量化实现、观测标准化一致性以及完整控制循环的 20 ms 最坏延迟。
+          </div>
+        </div>
+        <div class="meta">
+          <span>模型：model_3000.pt</span>
+          <span>任务：Mjlab-Velocity-Flat-MicroDuck</span>
+          <span>控制频率：50 Hz</span>
+        </div>
+      </div>
+
+      <div class="architecture" aria-label="模型结构图">
+        <h2>Actor 网络结构</h2>
+        <p class="sub">标准化已内嵌在 ONNX 中，推理图共 9 个算子节点</p>
+        <div class="network-flow">
+          <div class="layer input"><strong>61</strong><small>obs</small></div>
+          <span class="arrow">›</span>
+          <div class="layer l1"><strong>512</strong><small>ELU</small></div>
+          <span class="arrow">›</span>
+          <div class="layer l2"><strong>256</strong><small>ELU</small></div>
+          <span class="arrow">›</span>
+          <div class="layer l3"><strong>128</strong><small>ELU</small></div>
+          <span class="arrow">›</span>
+          <div class="layer output"><strong>14</strong><small>actions</small></div>
+        </div>
+        <div class="arch-foot">
+          <div><strong>197,896</strong><span>参数与标准化常量</span></div>
+          <div><strong>196,864</strong><span>MAC / inference</span></div>
+          <div><strong>20 ms</strong><span>完整控制周期预算</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav aria-label="报告目录">
+    <div class="inner">
+      <a href="#profile">模型画像</a>
+      <a href="#platforms">平台选型</a>
+      <a href="#toolchains">工具链</a>
+      <a href="#pipeline">转换路线</a>
+      <a href="#risks">关键风险</a>
+      <a href="#validation">验收门槛</a>
+      <a href="#decision">建议</a>
+    </div>
+  </nav>
+
+  <main>
+    <section id="profile">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">01 / Model profile</p>
+            <h2>当前模型不大，运行时约束才是重点</h2>
+          </div>
+          <p>数字来自现有 ONNX 的输入、输出、initializer 和节点统计。INT8 大小为理论权重占用，不包含运行时代码、量化参数和临时缓冲区。</p>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><span class="value">61 → 14</span><span class="label">FP32 输入 / 输出张量</span></div>
+          <div class="metric"><span class="value">776 KiB</span><span class="label">当前 ONNX 文件大小</span></div>
+          <div class="metric"><span class="value">9.84 M</span><span class="label">50 Hz 下每秒 MAC</span></div>
+          <div class="metric"><span class="value">4× FC</span><span class="label">主体均为全连接层</span></div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <h3>仅权重与常量的精度占用</h3>
+            <div class="bar-row"><span>FP32</span><div class="track"><div class="fill fp32"></div></div><strong>773 KiB</strong></div>
+            <div class="bar-row"><span>FP16</span><div class="track"><div class="fill fp16"></div></div><strong>387 KiB</strong></div>
+            <div class="bar-row"><span>INT8</span><div class="track"><div class="fill int8"></div></div><strong>193 KiB</strong></div>
+            <p style="margin:18px 0 0;color:var(--muted);font-size:.8rem;">INT8 将权重存储压缩至 FP32 的约 25%，也更容易命中 MCU 的 SIMD/DSP 优化路径。</p>
+          </div>
+
+          <div class="panel">
+            <h3>ONNX 算子构成</h3>
+            <div class="op-grid">
+              <div class="op"><strong>4</strong><span>Gemm / FC</span></div>
+              <div class="op risk"><strong>3</strong><span>ELU / 核心风险</span></div>
+              <div class="op"><strong>1</strong><span>Sub / 标准化</span></div>
+              <div class="op"><strong>1</strong><span>Div / 标准化</span></div>
+            </div>
+            <p style="margin:18px 0 0;color:var(--muted);font-size:.8rem;">建议把 Sub/Div 移到 MCU 的观测构造代码中；INT8 网络仅保留全连接与激活，降低转换器算子覆盖压力。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="platforms">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">02 / Platform choice</p>
+            <h2>两条都能走，工程体验不同</h2>
+          </div>
+          <p>评分是针对当前模型的工程预估，不是板上实测。点击平台切换重点建议；最终必须用目标板的最坏延迟和内存数据决策。</p>
+        </div>
+
+        <div class="selector-wrap">
+          <strong>目标平台视图</strong>
+          <div class="segmented" role="tablist" aria-label="目标平台">
+            <button type="button" role="tab" aria-selected="true" data-platform="esp">ESP32-S3</button>
+            <button type="button" role="tab" aria-selected="false" data-platform="stm">STM32H7</button>
+          </div>
+        </div>
+
+        <div class="platform-layout">
+          <div class="platform-card only-active active" data-panel="esp">
+            <h3>ESP32-S3</h3>
+            <p class="platform-sub">建议：带 8 MB PSRAM 的 N16R8 模组</p>
+            <div class="score-list">
+              <div class="score-row"><span>INT8 性能潜力</span><div class="score-track"><div class="score-fill" style="width:82%"></div></div><strong>82</strong></div>
+              <div class="score-row"><span>工具链直接性</span><div class="score-track"><div class="score-fill" style="width:68%"></div></div><strong>68</strong></div>
+              <div class="score-row"><span>无线与成本</span><div class="score-track"><div class="score-fill" style="width:94%"></div></div><strong>94</strong></div>
+              <div class="score-row"><span>算子确定性</span><div class="score-track"><div class="score-fill" style="width:58%"></div></div><strong>58</strong></div>
+            </div>
+            <p class="platform-note">首选 ESP-DL + ESP-PPQ。先验证 Gemm/ELU 转换；若 ELU 无高效 INT8 路径，重新训练 ReLU 版本比维护自定义浮点回退更稳。</p>
+          </div>
+
+          <div class="platform-card only-active" data-panel="stm">
+            <h3>STM32H7</h3>
+            <p class="platform-sub">建议：先用 Cube.AI 对具体料号分析</p>
+            <div class="score-list">
+              <div class="score-row"><span>INT8 性能潜力</span><div class="score-track"><div class="score-fill" style="width:86%"></div></div><strong>86</strong></div>
+              <div class="score-row"><span>工具链直接性</span><div class="score-track"><div class="score-fill" style="width:92%"></div></div><strong>92</strong></div>
+              <div class="score-row"><span>无线与成本</span><div class="score-track"><div class="score-fill" style="width:57%"></div></div><strong>57</strong></div>
+              <div class="score-row"><span>算子确定性</span><div class="score-track"><div class="score-fill" style="width:84%"></div></div><strong>84</strong></div>
+            </div>
+            <p class="platform-note">首选 STM32Cube.AI / ST Edge AI Core。它可先报告模型兼容性、Flash、RAM 和推理时间，适合在定板前筛选 STM32H7 具体型号。</p>
+          </div>
+
+          <div class="comparison">
+            <table>
+              <thead><tr><th>维度</th><th>ESP32-S3</th><th>STM32H7</th></tr></thead>
+              <tbody>
+                <tr><td>主工具链</td><td>ESP-DL / esp-tflite-micro</td><td>STM32Cube.AI / CMSIS-NN</td></tr>
+                <tr><td>建议模型格式</td><td>量化 `.espdl` 或 INT8 `.tflite`</td><td>ONNX/TFLite 输入，生成静态 C 库</td></tr>
+                <tr><td>当前模型入口</td><td><span class="status check">需要转换</span></td><td><span class="status good">可先直接分析</span></td></tr>
+                <tr><td>ELU 风险</td><td><span class="status risk">优先验证</span></td><td><span class="status check">以分析器结果为准</span></td></tr>
+                <tr><td>系统优势</td><td>低成本、Wi-Fi/BLE、ESP-IDF 生态</td><td>实时控制生态、静态代码生成、芯片覆盖广</td></tr>
+                <tr><td>建议用途</td><td>成本优先的一体化控制器</td><td>首次落地和严谨性能评估</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="toolchains">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">03 / Toolchains</p>
+            <h2>官方工具优先，通用工具留作备选</h2>
+          </div>
+          <p>ONNX 是交换格式，不是 MCU 运行时。部署工具要么把模型转换为芯片专用格式，要么生成静态 C/C++ 和优化算子调用。</p>
+        </div>
+
+        <div class="comparison">
+          <table>
+            <thead><tr><th>工具</th><th>平台</th><th>输入与输出</th><th>适合当前项目的角色</th></tr></thead>
+            <tbody>
+              <tr><td><strong>ESP-DL + ESP-PPQ</strong></td><td>ESP32-S3/P4</td><td>ONNX → 量化 `.espdl`</td><td>ESP32 首选，走乐鑫专用 INT8/INT16 路径</td></tr>
+              <tr><td><strong>esp-tflite-micro + ESP-NN</strong></td><td>ESP32</td><td>INT8 `.tflite` → C++ runtime</td><td>跨平台模型路线，需确认 ELU 内核与 arena</td></tr>
+              <tr><td><strong>STM32Cube.AI / ST Edge AI Core</strong></td><td>STM32</td><td>ONNX/TFLite → 优化 C 库</td><td>STM32 首选，先分析再选具体 MCU</td></tr>
+              <tr><td><strong>CMSIS-NN</strong></td><td>Arm Cortex-M</td><td>INT8/INT16 优化算子库</td><td>底层后端，不负责完整 ONNX 转换</td></tr>
+              <tr><td><strong>Edge Impulse</strong></td><td>ESP32 / STM32</td><td>模型 → C++ 库/固件</td><td>最快概念验证，适合对比板上指标</td></tr>
+              <tr><td><strong>microTVM</strong></td><td>多种 MCU</td><td>模型 → 静态运行时/代码</td><td>高度定制时再用，当前阶段复杂度偏高</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="pipeline">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">04 / Deployment pipeline</p>
+            <h2>从 FP32 基线到可上机器人的 INT8 固件</h2>
+          </div>
+          <p>每一步都保留可比较产物，避免在量化、转换和控制逻辑同时变化时失去问题定位能力。</p>
+        </div>
+
+        <div class="pipeline">
+          <article class="stage"><h3>固定 FP32 基线</h3><p>记录 ONNX 输出、仿真奖励、摔倒率和关键动作轨迹。</p></article>
+          <article class="stage"><h3>采集校准数据</h3><p>保存真实 rollout 的 61 维观测，覆盖行走、转向、静止和扰动。</p></article>
+          <article class="stage"><h3>图简化</h3><p>标准化移到固件侧；确认 FC 与激活的目标算子映射。</p></article>
+          <article class="stage"><h3>PTQ / QAT</h3><p>先做 INT8 PTQ；闭环退化时再用 QAT 微调。</p></article>
+          <article class="stage"><h3>板上集成</h3><p>静态分配内存，将推理嵌入 50 Hz 传感器与舵机循环。</p></article>
+          <article class="stage"><h3>逐级放行</h3><p>离线对齐 → 仿真闭环 → 吊架低功率 → 自由行走。</p></article>
+        </div>
+
+        <div class="callout">
+          <strong>不可省略：</strong>当前导出器把 observation normalizer 烘焙进 ONNX。若 MCU 将它移出模型，必须逐项保存并复现相同的 mean、std、裁剪规则与观测顺序；否则即使网络权重完全正确，策略也会立即失效。
+        </div>
+      </div>
+    </section>
+
+    <section id="risks">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">05 / Risk register</p>
+            <h2>优先处理会让机器人摔倒的问题</h2>
+          </div>
+          <p>风险按闭环影响排序。文件大小不是最高风险；观测契约或时序错误会让一个离线 MAE 很低的模型仍然无法行走。</p>
+        </div>
+
+        <div class="risk-grid">
+          <article class="risk-card high"><h3>观测契约偏差</h3><p>61 维顺序、单位、关节方向、上一动作或标准化任一不一致，都会形成系统性错误。</p><p class="mitigation">对策：保存黄金观测向量，逐元素对比 Linux 与 MCU。</p></article>
+          <article class="risk-card high"><h3>ELU 量化与回退</h3><p>目标工具可能不支持高效 INT8 ELU，或静默回退到慢速浮点实现。</p><p class="mitigation">对策：先跑转换器分析；必要时训练 ReLU 版本。</p></article>
+          <article class="risk-card high"><h3>20 ms 最坏延迟</h3><p>平均推理快不代表控制可靠；舵机总线、IMU 与偶发中断会共同占用预算。</p><p class="mitigation">对策：统计 P99.9 与最大周期，并设置超时安全态。</p></article>
+          <article class="risk-card"><h3>PTQ 校准覆盖不足</h3><p>只用直行样本会让转向、跌倒边缘状态的激活范围发生饱和。</p><p class="mitigation">对策：按行为分桶采样，并记录每层饱和率。</p></article>
+          <article class="risk-card"><h3>连续动作量化误差</h3><p>单步小误差进入 50 Hz 闭环后可能表现为抖动、漂移或能耗上升。</p><p class="mitigation">对策：比较动作 MAE 之外，还要做长时闭环仿真。</p></article>
+          <article class="risk-card low"><h3>模型存储容量</h3><p>INT8 权重约 193 KiB，可放在常见 ESP32-S3/STM32 的 Flash 中。</p><p class="mitigation">对策：权重留 Flash，内部 SRAM 优先给激活和实时缓冲。</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="validation">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">06 / Acceptance gates</p>
+            <h2>四道门，不能只看“能跑起来”</h2>
+          </div>
+          <p>具体阈值应在 FP32 rollout 上建立分布后冻结。下面定义的是必须测量的维度，而不是未经实验的万能数值。</p>
+        </div>
+
+        <div class="gates">
+          <article class="gate"><div class="gate-num">A</div><div><h3>逐张量一致性</h3><p>黄金输入上核对标准化结果、各层输出、最终 14 维动作和限位后的目标位置。</p></div></article>
+          <article class="gate"><div class="gate-num">B</div><div><h3>离线误差</h3><p>统计动作 MAE、最大误差、P99 误差、余弦相似度和 INT8 饱和比例。</p></div></article>
+          <article class="gate"><div class="gate-num">C</div><div><h3>闭环行为</h3><p>比较速度跟踪、摔倒率、关节抖动、能耗代理指标和不同命令区间表现。</p></div></article>
+          <article class="gate"><div class="gate-num">D</div><div><h3>板上实时性</h3><p>测量完整周期最大值、P99.9、内存峰值、看门狗触发和通信丢帧。</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="decision">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">07 / Recommendation</p>
+            <h2>先用工具降低不确定性，再定硬件</h2>
+          </div>
+          <p>这不是单纯的格式转换任务，而是把一个对时序和观测非常敏感的闭环控制器迁移到资源受限平台。</p>
+        </div>
+
+        <div class="recommendation">
+          <div class="decision">
+            <span>推荐的第一条路线</span>
+            <span class="big">STM32H7<br>+ Cube.AI</span>
+            <p>理由不是算力更强，而是可以先直接分析现有 ONNX，快速得到算子、Flash、RAM 和延迟证据。待模型图与 INT8 行为稳定后，再平移到 ESP32-S3。</p>
+          </div>
+          <div class="next-steps">
+            <h3>建议的下一阶段交付物</h3>
+            <ol>
+              <li>从仿真采集按行为分桶的 61 维校准集和 FP32 黄金输出。</li>
+              <li>生成“标准化在模型外”的 ONNX，并确认与当前 ONNX 数值等价。</li>
+              <li>分别跑 STM32Cube.AI 分析和 ESP-DL/ESP-PPQ 转换，记录不支持算子。</li>
+              <li>制作 INT8 PTQ 候选；若闭环退化，再训练 ELU-QAT 或 ReLU-QAT 版本。</li>
+              <li>在两块开发板运行同一黄金测试集，形成延迟、Flash、RAM、误差对比表。</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">08 / Sources</p>
+            <h2>工具与资料入口</h2>
+          </div>
+          <p>调研日期为 2026-10-25。旧版 Espressif 与 ST 产品文档 URL 已迁移，实施时应以仓库 README、实时转换器报告和目标工具版本为准。</p>
+        </div>
+        <ul class="sources">
+          <li><a href="https://github.com/espressif/esp-dl">Espressif ESP-DL</a> — ESP 系列轻量推理框架</li>
+          <li><a href="https://github.com/espressif/esp-tflite-micro">esp-tflite-micro</a> — 乐鑫 TFLite Micro 组件</li>
+          <li><a href="https://github.com/espressif/esp-nn">ESP-NN</a> — ESP32 优化神经网络内核</li>
+          <li><a href="https://www.st.com/content/st_com/en/ecosystems/artificial-intelligence-ecosystem-stm32.html">STM32 AI Ecosystem</a> — ST 官方 AI 入口</li>
+          <li><a href="https://stedgeai-dc.st.com/">ST Edge AI Developer Cloud</a> — 在线分析与基准测试</li>
+          <li><a href="https://github.com/ARM-software/CMSIS-NN">Arm CMSIS-NN</a> — Cortex-M 优化内核</li>
+          <li><a href="https://github.com/tensorflow/tflite-micro">TensorFlow Lite Micro</a> — 通用 MCU runtime</li>
+          <li><a href="https://docs.edgeimpulse.com/">Edge Impulse Docs</a> — 端到端 TinyML 工作流</li>
+          <li><a href="https://tvm.apache.org/docs/topic/microtvm/index.html">Apache TVM / microTVM</a> — MCU 编译部署</li>
+          <li><a href="../README-CN.md">Microduck RL 中文 README</a> — 61 维观测与导出约定</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <span>Microduck MCU Deployment Assessment</span>
+      <span>基于 velocity/model_3000.pt 的工程评估</span>
+    </div>
+  </footer>
+
+  <script>
+    const tabs = document.querySelectorAll('[data-platform]');
+    const panels = document.querySelectorAll('[data-panel]');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.platform;
+        tabs.forEach((item) => item.setAttribute('aria-selected', String(item === tab)));
+        panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === target));
+      });
+    });
+  </script>
+</body>
+</html>
